@@ -1,0 +1,24 @@
+{
+  "name": "image-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon --watch src --exec node src/server.js"
+  },
+  "dependencies": {
+    "bullmq": "^1.80.0",
+    "dotenv": "^16.0.0",
+    "express": "^4.18.2",
+    "ioredis": "^5.3.2",
+    "mime-types": "^2.1.35",
+    "mongoose": "^7.0.0",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemon": "^2.0.22",
+    "sharp": "^0.32.1",
+    "tesseract.js": "^7.0.0",
+    "uuid": "^9.0.0"
+  }
+}

@@ -1,0 +1,30 @@
+# Environment
+.env
+.env.*
+
+# Python
+paddle-env/
+venv/
+__pycache__/
+*.pyc
+
+# Generated images
+uploads/crops/*
+!uploads/crops/.gitkeep
+
+# Model files
+*.pt
+*.onnx
+
+# Google credentials
+google-credentials.json
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node
+node_modules/
