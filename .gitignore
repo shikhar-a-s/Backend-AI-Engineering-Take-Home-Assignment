@@ -8,7 +8,11 @@ venv/
 __pycache__/
 *.pyc
 
-# Generated images
+# Generated uploads
+uploads/*
+!uploads/.gitkeep
+
+# Generated crops
 uploads/crops/*
 !uploads/crops/.gitkeep
 
@@ -28,3 +32,4 @@ Thumbs.db
 
 # Node
 node_modules/
+
