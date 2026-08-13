@@ -8,12 +8,12 @@ async function test() {
 
     if (!imagePath) {
       console.log(
-        'Usage: node test-paddle-ocr.js "path/to/image.png"'
+        'Usage: node test-rapid-ocr.js "path/to/image.png"'
       );
       process.exit(1);
     }
 
-    console.log('PaddleOCR Node Test');
+    console.log('RapidOCR Node Test');
     console.log('');
     console.log('Input:', imagePath);
     console.log('');

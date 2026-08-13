@@ -20,12 +20,6 @@ services:
         sync: false
       - key: UPLOAD_DIR
         value: uploads
-      - key: YOLO_PYTHON
-        value: python
-      - key: PADDLE_PYTHON
-        value: python
-      - key: YOLO_MODEL_PATH
-        value: /app/src/services/yolov8n.pt
 
 databases:
   - type: redis
