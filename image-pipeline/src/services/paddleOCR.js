@@ -10,15 +10,17 @@ async function extractPlateText(imagePath) {
 
     const pythonExecutable =
       process.env.PADDLE_PYTHON ||
-      path.join(
-        __dirname,
-        '..',
-        '..',
-        '..',
-        'paddle-env',
-        'Scripts',
-        'python.exe'
-      );
+      (process.platform === 'win32'
+        ? path.join(
+            __dirname,
+            '..',
+            '..',
+            '..',
+            'paddle-env',
+            'Scripts',
+            'python.exe'
+          )
+        : 'python3');
 
     const python = spawn(
       pythonExecutable,

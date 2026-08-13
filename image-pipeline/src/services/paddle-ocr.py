@@ -298,7 +298,7 @@ def main():
         # Keep PaddleOCR/runtime logs out of stdout.
         # Node expects stdout to contain JSON.
         with open(
-            "nul",
+            os.devnull,
             "w",
             encoding="utf-8"
         ) as devnull:
