@@ -52,7 +52,8 @@ ENV NODE_ENV=production
 ENV YOLO_MODEL_PATH="/app/src/services/yolov8n.pt"
 ENV YOLO_PYTHON=python
 ENV PADDLE_PYTHON=python
-
+ENV OMP_NUM_THREADS=1
+ENV MKL_NUM_THREADS=1
 # ==================================================
 # Upload directory
 # ==================================================
