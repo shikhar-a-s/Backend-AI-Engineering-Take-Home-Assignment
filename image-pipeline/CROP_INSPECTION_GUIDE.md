@@ -73,9 +73,9 @@ image-pipeline/uploads/crops/primary-vehicle.png
 
 ### Step 4: If crop looks good
 
-Proceed to **Stage 4: Tesseract OCR Integration**
+Proceed to **Stage 4: PaddleOCR Integration**
 
-The crop will be fed to Tesseract for license plate text extraction.
+The crop will be fed to PaddleOCR for license plate text extraction.
 
 ## Files
 
@@ -85,6 +85,5 @@ The crop will be fed to Tesseract for license plate text extraction.
 ## Next: OCR Stage
 
 Once crop quality is confirmed, we'll add:
-- Tesseract OCR on the cropped region
+- PaddleOCR on the cropped region
 - Plate text extraction
-- Regex validation

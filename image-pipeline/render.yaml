@@ -1,0 +1,34 @@
+services:
+  - type: web
+    name: image-pipeline
+    env: docker
+    plan: starter
+    rootDir: image-pipeline
+    envVars:
+      - key: PORT
+        value: 10000
+      - key: NODE_ENV
+        value: production
+      - key: MONGO_URL
+        sync: false
+      - key: REDIS_URL
+        fromService:
+          name: image-pipeline-redis
+          type: redis
+          property: connectionString
+      - key: ROBOFLOW_API_KEY
+        sync: false
+      - key: UPLOAD_DIR
+        value: uploads
+      - key: YOLO_PYTHON
+        value: python
+      - key: PADDLE_PYTHON
+        value: python
+      - key: YOLO_MODEL_PATH
+        value: ""
+
+databases:
+  - type: redis
+    name: image-pipeline-redis
+    plan: free
+    ipAllowList: []

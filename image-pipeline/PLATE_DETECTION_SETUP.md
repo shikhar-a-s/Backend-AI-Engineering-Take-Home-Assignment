@@ -2,7 +2,7 @@
 
 ## Overview
 
-Before OCR, we need to detect and crop just the license plate region from the vehicle crop. This gives Tesseract a clean, focused image.
+Before OCR, we need to detect and crop just the license plate region from the vehicle crop. This gives PaddleOCR a clean, focused image.
 
 ## Model Setup
 
@@ -157,7 +157,7 @@ Once plate crop quality is confirmed:
 ```
 license-plate.png
         ↓
-Tesseract OCR
+PaddleOCR
         ↓
 "TN05BT7549"
         ↓
