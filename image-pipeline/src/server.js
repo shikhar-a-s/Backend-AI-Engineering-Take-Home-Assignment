@@ -2,14 +2,28 @@ require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const morgan = require('morgan');
-
+const cors = require('cors');
+const path = require('path');
 const imagesRouter = require('./routes/images');
 // start worker
 require('./queue/worker');
 
 const app = express();
 app.use(morgan('dev'));
+
+// Enable CORS so that the frontend (running on a different origin during development)
+// can POST uploads and fetch results. This is permissive (allows all origins).
+// For stricter security, replace with a specific origin list.
+app.use(cors());
+
 app.use(express.json());
+
+app.use(
+  '/uploads',
+  express.static(
+    path.join(__dirname, '..', 'uploads')
+  )
+);
 
 // Health Check Endpoints
 app.get('/health', (req, res) => {
@@ -78,4 +92,4 @@ const gracefulShutdown = async (signal) => {
 };
 
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
