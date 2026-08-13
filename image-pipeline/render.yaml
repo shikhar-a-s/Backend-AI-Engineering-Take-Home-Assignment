@@ -25,7 +25,7 @@ services:
       - key: PADDLE_PYTHON
         value: python
       - key: YOLO_MODEL_PATH
-        value: ""
+        value: /app/src/services/yolov8n.pt
 
 databases:
   - type: redis
