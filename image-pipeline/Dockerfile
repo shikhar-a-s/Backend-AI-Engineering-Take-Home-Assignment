@@ -42,12 +42,11 @@ RUN pip install \
     --no-cache-dir \
     -r requirements.lock.txt
 
-
-# ==================================================
-# Application source
-# ==================================================
-
 COPY . .
+
+# Pre-download YOLOv8 and PaddleOCR models to bake them into the image
+RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
+RUN python -c "from paddleocr import PaddleOCR; PaddleOCR(lang='en', device='cpu')"
 
 
 # ==================================================
