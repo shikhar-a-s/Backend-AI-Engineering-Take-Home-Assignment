@@ -17,7 +17,6 @@ uploads/*
 uploads/crops/*
 !uploads/crops/.gitkeep
 
-*.pt
 *.onnx
 
 *.log

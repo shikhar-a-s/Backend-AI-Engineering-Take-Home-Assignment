@@ -44,24 +44,14 @@ RUN pip install \
 
 COPY . .
 
-# Pre-download YOLOv8 and PaddleOCR models to bake them into the image
-RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')"
-RUN python -c "from paddleocr import PaddleOCR; PaddleOCR(lang='en', device='cpu')"
-
-
 # ==================================================
 # Environment
 # ==================================================
 
 ENV NODE_ENV=production
-
+ENV YOLO_MODEL_PATH="/app/src/services/yolov8n.pt"
 ENV YOLO_PYTHON=python
 ENV PADDLE_PYTHON=python
-
-# Leave empty so yolo-detect.py uses yolov8n.pt
-# and allows Ultralytics to download it automatically.
-ENV YOLO_MODEL_PATH=""
-
 
 # ==================================================
 # Upload directory
