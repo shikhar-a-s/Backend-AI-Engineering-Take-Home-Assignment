@@ -45,9 +45,18 @@ async function detectPlates(imagePath) {
       `https://serverless.roboflow.com/infer/workflows/` +
       `${workspaceName}/${workflowId}`;
 
-    console.log('Calling Roboflow Workflow...');
-    console.log(`Workspace: ${workspaceName}`);
-    console.log(`Workflow: ${workflowId}`);
+    console.log(
+      'Calling Roboflow Workflow...'
+    );
+
+    console.log(
+      `Workspace: ${workspaceName}`
+    );
+
+    console.log(
+      `Workflow: ${workflowId}`
+    );
+
     console.log('');
 
     // --------------------------------------------------
@@ -80,29 +89,46 @@ async function detectPlates(imagePath) {
     // --------------------------------------------------
     // 6. Extract predictions
     //
-    // Actual Roboflow response:
+    // Roboflow workflow responses can expose
+    // predictions in different structures.
     //
-    // data
-    //   └── outputs
-    //       └── [0]
-    //           └── predictions
-    //               └── predictions []
+    // We support:
     //
+    // outputs[0].predictions[]
+    //
+    // and:
+    //
+    // outputs[0].predictions.predictions[]
     // --------------------------------------------------
 
     let predictions = [];
 
     if (
       data &&
-      Array.isArray(data.outputs) &&
-      data.outputs.length > 0 &&
-      data.outputs[0].predictions &&
-      Array.isArray(
-        data.outputs[0].predictions.predictions
-      )
+      Array.isArray(data.outputs)
     ) {
-      predictions =
-        data.outputs[0].predictions.predictions;
+      for (const output of data.outputs) {
+
+        if (
+          Array.isArray(
+            output?.predictions
+          )
+        ) {
+          predictions.push(
+            ...output.predictions
+          );
+        }
+
+        if (
+          Array.isArray(
+            output?.predictions?.predictions
+          )
+        ) {
+          predictions.push(
+            ...output.predictions.predictions
+          );
+        }
+      }
     }
 
     console.log(
@@ -116,38 +142,48 @@ async function detectPlates(imagePath) {
     const plates = predictions
       .filter(
         (pred) =>
+          pred &&
           pred.class === 'number_plate'
       )
       .map((pred) => {
 
-        // Roboflow gives:
+        // Roboflow:
         //
-        // x, y = center of bbox
-        // width, height = bbox dimensions
+        // x, y      = center
+        // width     = bbox width
+        // height    = bbox height
         //
         // Convert to:
         //
         // x1, y1, x2, y2
 
         const x1 =
-          pred.x - pred.width / 2;
+          pred.x -
+          pred.width / 2;
 
         const y1 =
-          pred.y - pred.height / 2;
+          pred.y -
+          pred.height / 2;
 
         const x2 =
-          pred.x + pred.width / 2;
+          pred.x +
+          pred.width / 2;
 
         const y2 =
-          pred.y + pred.height / 2;
+          pred.y +
+          pred.height / 2;
 
         const area =
-          pred.width * pred.height;
+          pred.width *
+          pred.height;
 
         return {
-          confidence: Number(
-            pred.confidence.toFixed(4)
-          ),
+          confidence:
+            Number(
+              Number(
+                pred.confidence
+              ).toFixed(4)
+            ),
 
           bbox: [
             Number(x1.toFixed(2)),
@@ -156,23 +192,27 @@ async function detectPlates(imagePath) {
             Number(y2.toFixed(2))
           ],
 
-          area: Number(
-            area.toFixed(2)
-          ),
+          area:
+            Number(
+              area.toFixed(2)
+            ),
 
-          width: Number(
-            pred.width.toFixed(2)
-          ),
+          width:
+            Number(
+              pred.width.toFixed(2)
+            ),
 
-          height: Number(
-            pred.height.toFixed(2)
-          ),
+          height:
+            Number(
+              pred.height.toFixed(2)
+            ),
 
           class_name:
             pred.class,
 
           detection_id:
-            pred.detection_id || null
+            pred.detection_id ||
+            null
         };
       });
 
@@ -180,44 +220,52 @@ async function detectPlates(imagePath) {
     // 8. Sort by AREA
     //
     // Largest plate first.
-    //
-    // This is our current strategy for identifying
-    // the primary registration plate.
+    // Therefore plates[0] is the largest plate.
     // --------------------------------------------------
 
     plates.sort(
-      (a, b) => b.area - a.area
+      (a, b) =>
+        b.area - a.area
     );
 
     // --------------------------------------------------
-    // 9. Print all detections
+    // 9. Print detections
     // --------------------------------------------------
 
     console.log('');
-    console.log('Detected plates:');
+    console.log(
+      'Detected plates:'
+    );
 
-    plates.forEach((plate, index) => {
-      console.log(`  Plate ${index}:`);
-      console.log(
-        `    Confidence: ${plate.confidence}`
-      );
-      console.log(
-        `    Bbox: [${plate.bbox.join(', ')}]`
-      );
-      console.log(
-        `    Size: ${plate.width}x${plate.height}px`
-      );
-      console.log(
-        `    Area: ${plate.area}px²`
-      );
-      console.log('');
-    });
+    plates.forEach(
+      (plate, index) => {
+
+        console.log(
+          `  Plate ${index}:`
+        );
+
+        console.log(
+          `    Confidence: ${plate.confidence}`
+        );
+
+        console.log(
+          `    Bbox: [${plate.bbox.join(', ')}]`
+        );
+
+        console.log(
+          `    Size: ${plate.width}x${plate.height}px`
+        );
+
+        console.log(
+          `    Area: ${plate.area}px²`
+        );
+
+        console.log('');
+      }
+    );
 
     // --------------------------------------------------
     // 10. Select primary plate
-    //
-    // Since plates are sorted by area descending,
-    // plates[0] is the largest detected plate.
     // --------------------------------------------------
 
     const primaryPlate =
@@ -226,6 +274,7 @@ async function detectPlates(imagePath) {
         : null;
 
     if (primaryPlate) {
+
       console.log(
         'Primary plate selected by largest area:'
       );

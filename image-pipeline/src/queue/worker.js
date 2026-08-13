@@ -10,10 +10,6 @@ const {
 } = require('../utils/imageUtils');
 
 const {
-  detectVehicles
-} = require('../services/vehicleDetection');
-
-const {
   detectPlates
 } = require('../services/plateDetection');
 
@@ -28,6 +24,7 @@ const {
 
 const worker = new Worker(
   'image-processing',
+
   async (job) => {
 
     const {
@@ -35,9 +32,10 @@ const worker = new Worker(
       filePath
     } = job.data;
 
-    const doc = await Image.findOne({
-      processingId
-    });
+    const doc =
+      await Image.findOne({
+        processingId
+      });
 
     if (!doc) {
       throw new Error(
@@ -51,8 +49,11 @@ const worker = new Worker(
       // 1. START PROCESSING
       // ==================================================
 
-      doc.status = 'processing';
-      doc.processingStartedAt = new Date();
+      doc.status =
+        'processing';
+
+      doc.processingStartedAt =
+        new Date();
 
       await doc.save();
 
@@ -66,58 +67,13 @@ const worker = new Worker(
       // ==================================================
 
       const analysis =
-        await analyzeImage(filePath);
+        await analyzeImage(
+          filePath
+        );
 
 
       // ==================================================
-      // 3. VEHICLE DETECTION
-      // ==================================================
-
-      console.log(
-        `[${processingId}] Detecting vehicles...`
-      );
-
-      const vehicleResult =
-        await detectVehicles(filePath);
-
-      if (
-        vehicleResult.success &&
-        vehicleResult.primaryVehicle
-      ) {
-
-        analysis.vehicle = {
-          vehicleCount:
-            vehicleResult.vehicleCount,
-
-          primaryVehicle:
-            vehicleResult.primaryVehicle
-        };
-
-        console.log(
-          `[${processingId}] Vehicles found: ` +
-          `${vehicleResult.vehicleCount}`
-        );
-
-        console.log(
-          `[${processingId}] Primary vehicle: ` +
-          `${vehicleResult.primaryVehicle.class_name}`
-        );
-
-      } else {
-
-        analysis.vehicle = {
-          vehicleCount: 0,
-          primaryVehicle: null
-        };
-
-        console.log(
-          `[${processingId}] No vehicle detected`
-        );
-      }
-
-
-      // ==================================================
-      // 4. PLATE DETECTION
+      // 3. PLATE DETECTION
       // ==================================================
 
       console.log(
@@ -125,15 +81,21 @@ const worker = new Worker(
       );
 
       /*
-       * IMPORTANT:
-       * Plate detection is done on the ORIGINAL image.
+       * Plate detection is performed directly
+       * on the original image using Roboflow.
        *
-       * plateDetection.js already selects the largest
-       * detected plate as primaryPlate.
+       * plateDetection.js:
+       *
+       * 1. Gets all number_plate detections
+       * 2. Calculates area
+       * 3. Sorts descending by area
+       * 4. Selects plates[0] as primaryPlate
        */
 
       const plateResult =
-        await detectPlates(filePath);
+        await detectPlates(
+          filePath
+        );
 
 
       if (
@@ -161,30 +123,30 @@ const worker = new Worker(
 
 
         // ==================================================
-        // 5. CREATE OCR CROP
+        // 4. CREATE OCR CROP
         // ==================================================
 
+        const cropDir =
+          path.join(
+            __dirname,
+            '..',
+            '..',
+            'uploads',
+            'crops'
+          );
+
+        const ocrCropPath =
+          path.join(
+            cropDir,
+            `${processingId}-plate-ocr.png`
+          );
+
         /*
-         * Store generated OCR crops in:
+         * Crop directly from the original image.
          *
-         * image-pipeline/uploads/crops/
-         *
-         * The crop is taken directly from the ORIGINAL image
-         * using the selected plate bbox.
+         * Keep the existing crop utility and its
+         * current expansion/upscaling behavior.
          */
-
-        const cropDir = path.join(
-          __dirname,
-          '..',
-          '..',
-          'uploads',
-          'crops'
-        );
-
-        const ocrCropPath = path.join(
-          cropDir,
-          `${processingId}-plate-ocr.png`
-        );
 
         const ocrCrop =
           await cropPlateForOCR(
@@ -201,7 +163,7 @@ const worker = new Worker(
 
 
         // ==================================================
-        // 6. PADDLE OCR
+        // 5. PADDLE OCR
         // ==================================================
 
         console.log(
@@ -214,8 +176,10 @@ const worker = new Worker(
           );
 
         if (!ocrResult.success) {
+
           throw new Error(
-            `PaddleOCR failed: ${ocrResult.error}`
+            `PaddleOCR failed: ` +
+            `${ocrResult.error}`
           );
         }
 
@@ -226,7 +190,7 @@ const worker = new Worker(
 
 
         // ==================================================
-        // 7. STORE VEHICLE + PLATE + OCR RESULTS
+        // 6. STORE PLATE + OCR RESULTS
         // ==================================================
 
         analysis.plate = {
@@ -235,6 +199,7 @@ const worker = new Worker(
             plateResult.plateCount,
 
           primaryPlate: {
+
             confidence:
               primaryPlate.confidence,
 
@@ -251,10 +216,12 @@ const worker = new Worker(
               primaryPlate.area,
 
             class_name:
-              primaryPlate.class_name || 'number_plate'
+              primaryPlate.class_name ||
+              'number_plate'
           },
 
           ocrCrop: {
+
             path:
               ocrCrop.outputPath,
 
@@ -266,6 +233,7 @@ const worker = new Worker(
           },
 
           ocr: {
+
             plateNumber:
               ocrResult.text,
 
@@ -280,9 +248,13 @@ const worker = new Worker(
       } else {
 
         analysis.plate = {
+
           plateCount: 0,
+
           primaryPlate: null,
+
           ocrCrop: null,
+
           ocr: null
         };
 
@@ -293,17 +265,26 @@ const worker = new Worker(
 
 
       // ==================================================
-      // 8. DUPLICATE DETECTION
+      // 7. DUPLICATE DETECTION
       // ==================================================
 
-      let duplicate = null;
-      let duplicateType = null;
-      let hammingDist = null;
+      let duplicate =
+        null;
+
+      let duplicateType =
+        null;
+
+      let hammingDist =
+        null;
 
 
-      // Exact MD5 match first
+      // --------------------------------------------------
+      // Exact MD5 match
+      // --------------------------------------------------
+
       const md5Match =
         await Image.findOne({
+
           _id: {
             $ne: doc._id
           },
@@ -311,28 +292,42 @@ const worker = new Worker(
           'analysis.md5':
             analysis.md5,
 
-          status: 'completed'
+          status:
+            'completed'
         });
 
 
       if (md5Match) {
 
-        duplicate = md5Match;
-        duplicateType = 'md5';
-        hammingDist = 0;
+        duplicate =
+          md5Match;
 
-      } else if (analysis.pHash) {
+        duplicateType =
+          'md5';
 
+        hammingDist =
+          0;
+
+      } else if (
+        analysis.pHash
+      ) {
+
+        // ------------------------------------------------
         // pHash similarity
-        const threshold = 5;
+        // ------------------------------------------------
+
+        const threshold =
+          5;
 
         const completedImages =
           await Image.find({
+
             _id: {
               $ne: doc._id
             },
 
-            status: 'completed',
+            status:
+              'completed',
 
             'analysis.pHash': {
               $exists: true
@@ -341,7 +336,8 @@ const worker = new Worker(
 
 
         for (
-          const img of completedImages
+          const img
+          of completedImages
         ) {
 
           const distance =
@@ -351,12 +347,18 @@ const worker = new Worker(
             );
 
           if (
-            distance <= threshold
+            distance <=
+            threshold
           ) {
 
-            duplicate = img;
-            duplicateType = 'phash';
-            hammingDist = distance;
+            duplicate =
+              img;
+
+            duplicateType =
+              'phash';
+
+            hammingDist =
+              distance;
 
             break;
           }
@@ -365,7 +367,7 @@ const worker = new Worker(
 
 
       // ==================================================
-      // 9. BUILD DUPLICATE OBJECT
+      // 8. BUILD DUPLICATE OBJECT
       // ==================================================
 
       if (duplicate) {
@@ -384,12 +386,13 @@ const worker = new Worker(
 
       } else {
 
-        analysis.duplicate = null;
+        analysis.duplicate =
+          null;
       }
 
 
       // ==================================================
-      // 10. SAVE RESULT
+      // 9. SAVE RESULT
       // ==================================================
 
       doc.analysis =
@@ -410,7 +413,6 @@ const worker = new Worker(
         new Date();
 
       await doc.save();
-
 
       console.log(
         `[${processingId}] Processing completed`
@@ -436,14 +438,20 @@ const worker = new Worker(
       throw err;
     }
   },
+
   {
     connection
   }
 );
 
 
+// ======================================================
+// BULLMQ FAILURE HANDLER
+// ======================================================
+
 worker.on(
   'failed',
+
   (job, err) => {
 
     console.error(
@@ -455,4 +463,5 @@ worker.on(
 );
 
 
-module.exports = worker;
+module.exports =
+  worker;

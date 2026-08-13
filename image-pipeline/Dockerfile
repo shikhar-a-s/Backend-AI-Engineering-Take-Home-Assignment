@@ -42,18 +42,29 @@ RUN pip install \
     --no-cache-dir \
     -r requirements.lock.txt
 
+
+# ==================================================
+# Application
+# ==================================================
+
 COPY . .
+
 
 # ==================================================
 # Environment
 # ==================================================
 
 ENV NODE_ENV=production
-ENV YOLO_MODEL_PATH="/app/src/services/yolov8n.pt"
-ENV YOLO_PYTHON=python
 ENV PADDLE_PYTHON=python
+
+# Limit CPU thread usage for the ML stack.
+# This helps keep memory/CPU usage predictable
+# on the Render instance.
+
 ENV OMP_NUM_THREADS=1
 ENV MKL_NUM_THREADS=1
+
+
 # ==================================================
 # Upload directory
 # ==================================================
@@ -66,6 +77,7 @@ RUN mkdir -p /app/uploads/crops
 # ==================================================
 
 EXPOSE 10000
+
 
 # ==================================================
 # Start application

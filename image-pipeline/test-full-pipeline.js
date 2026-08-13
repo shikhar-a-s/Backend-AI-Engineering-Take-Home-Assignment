@@ -1,5 +1,3 @@
-const { detectVehicles } = require('./src/services/vehicleDetection');
-
 const {
   detectPlates
 } = require('./src/services/plateDetection');
@@ -15,123 +13,136 @@ const {
 const path = require('path');
 const fs = require('fs');
 
+
 async function runPipeline() {
+
   try {
-    const imagePath = process.argv[2];
+
+    const imagePath =
+      process.argv[2];
 
     if (!imagePath) {
+
       console.log(
         'Usage: node test-full-pipeline.js "path/to/image.png"'
       );
+
       process.exit(1);
     }
+
 
     if (!fs.existsSync(imagePath)) {
-      console.log('❌ Image not found:', imagePath);
+
+      console.log(
+        `Image not found: ${imagePath}`
+      );
+
       process.exit(1);
     }
 
-    console.log('======================================');
-    console.log('FULL IMAGE PIPELINE TEST');
-    console.log('======================================');
+
+    console.log(
+      '======================================'
+    );
+
+    console.log(
+      'FULL IMAGE PIPELINE TEST'
+    );
+
+    console.log(
+      '======================================'
+    );
+
     console.log('');
-    console.log('Input:', imagePath);
+
+    console.log(
+      `Input: ${imagePath}`
+    );
+
     console.log('');
+
 
     // ==================================================
-    // STEP 1: VEHICLE DETECTION
+    // 1. ROBoflow PLATE DETECTION
     // ==================================================
 
-    console.log('Step 1: Detecting vehicles...');
+    console.log(
+      'Step 1: Detecting license plates...'
+    );
 
-    const vehicleResult =
-      await detectVehicles(imagePath);
+    const plateResult =
+      await detectPlates(
+        imagePath
+      );
+
 
     if (
-      !vehicleResult.success ||
-      !vehicleResult.primaryVehicle
+      !plateResult.success
     ) {
+
       throw new Error(
-        'No primary vehicle detected'
+        `Roboflow plate detection failed: ${
+          plateResult.error
+        }`
       );
     }
 
-    const primaryVehicle =
-      vehicleResult.primaryVehicle;
-
-    console.log('✓ Vehicle detection complete');
-
-    console.log(
-      `  Vehicles found: ${vehicleResult.vehicleCount}`
-    );
-
-    console.log(
-      `  Primary vehicle: ${primaryVehicle.class_name}`
-    );
-
-    console.log(
-      `  Confidence: ${primaryVehicle.confidence}`
-    );
-
-    console.log(
-      `  Bbox: [${primaryVehicle.bbox.join(', ')}]`
-    );
-
-    console.log('');
-
-    // ==================================================
-    // STEP 2: PLATE DETECTION
-    // ==================================================
-
-    console.log(
-      'Step 2: Detecting license plates...'
-    );
-
-    // Plate detection is performed on the ORIGINAL image.
-    const plateResult =
-      await detectPlates(imagePath);
 
     if (
-      !plateResult.success ||
       !plateResult.primaryPlate
     ) {
+
       throw new Error(
         'No license plate detected'
       );
     }
 
+
     const primaryPlate =
       plateResult.primaryPlate;
 
+
+    console.log('');
+
     console.log(
-      '✓ Plate detection complete'
+      `✓ Plates detected: ${
+        plateResult.plateCount
+      }`
     );
 
     console.log(
-      `  Plates found: ${plateResult.plateCount}`
+      `✓ Primary plate selected by area`
     );
 
     console.log(
-      `  Selected plate confidence: ${primaryPlate.confidence}`
+      `  Confidence: ${
+        primaryPlate.confidence
+      }`
     );
 
     console.log(
-      `  Selected plate area: ${primaryPlate.area}px²`
+      `  Bbox: [${
+        primaryPlate.bbox.join(', ')
+      }]`
     );
 
     console.log(
-      `  Plate bbox: [${primaryPlate.bbox.join(', ')}]`
+      `  Area: ${
+        primaryPlate.area
+      }px²`
     );
 
     console.log('');
 
+
     // ==================================================
-    // STEP 3: CREATE OCR CROP
+    // 2. OCR CROP
     // ==================================================
 
     console.log(
-      'Step 3: Creating OCR crop...'
+      'Step 2: Creating OCR crop...'
     );
+
 
     const cropDir =
       path.join(
@@ -140,18 +151,26 @@ async function runPipeline() {
         'crops'
       );
 
-    if (!fs.existsSync(cropDir)) {
+
+    if (
+      !fs.existsSync(cropDir)
+    ) {
+
       fs.mkdirSync(
         cropDir,
-        { recursive: true }
+        {
+          recursive: true
+        }
       );
     }
+
 
     const ocrCropPath =
       path.join(
         cropDir,
-        'pipeline-plate-ocr.png'
+        'full-pipeline-plate-ocr.png'
       );
+
 
     const ocrCrop =
       await cropPlateForOCR(
@@ -161,156 +180,217 @@ async function runPipeline() {
         0.25
       );
 
+
     console.log(
-      '✓ OCR crop created'
+      `✓ OCR crop created`
     );
 
     console.log(
-      `  Output: ${ocrCrop.outputPath}`
+      `  Path: ${
+        ocrCrop.outputPath
+      }`
     );
 
     console.log(
-      `  Size: ${
+      `  Dimensions: ${
         ocrCrop.cropDimensions.width
       }x${
         ocrCrop.cropDimensions.height
-      }px`
+      }`
     );
 
     console.log(
-      `  Expanded bbox: [` +
-      `${ocrCrop.expandedBbox.join(', ')}` +
-      `]`
+      `  Expanded bbox: [${
+        ocrCrop.expandedBbox.join(', ')
+      }]`
     );
 
     console.log('');
 
+
     // ==================================================
-    // STEP 4: PADDLE OCR
+    // 3. PADDLE OCR
     // ==================================================
 
     console.log(
-      'Step 4: Running PaddleOCR...'
+      'Step 3: Running PaddleOCR...'
     );
+
 
     const ocrResult =
       await extractPlateText(
         ocrCrop.outputPath
       );
 
-    if (!ocrResult.success) {
+
+    if (
+      !ocrResult.success
+    ) {
+
       throw new Error(
-        ocrResult.error ||
-        'PaddleOCR failed'
+        `PaddleOCR failed: ${
+          ocrResult.error
+        }`
       );
     }
 
-    console.log(
-      '✓ PaddleOCR complete'
-    );
-
-    console.log(
-      `  Plate number: ${ocrResult.text}`
-    );
-
-    console.log(
-      `  Raw text: ${ocrResult.rawText}`
-    );
 
     console.log('');
 
-    console.log('OCR lines:');
-
-    ocrResult.lines.forEach(
-      (line, index) => {
-        console.log(
-          `  ${index + 1}. ${line.text} ` +
-          `(confidence: ${line.confidence})`
-        );
-      }
-    );
-
-    console.log('');
-
-    // ==================================================
-    // FINAL RESULT
-    // ==================================================
-
-    const finalResult = {
-      success: true,
-
-      image: imagePath,
-
-      vehicle: {
-        class_name:
-          primaryVehicle.class_name,
-
-        confidence:
-          primaryVehicle.confidence,
-
-        bbox:
-          primaryVehicle.bbox
-      },
-
-      plate: {
-        confidence:
-          primaryPlate.confidence,
-
-        bbox:
-          primaryPlate.bbox,
-
-        area:
-          primaryPlate.area
-      },
-
-      ocr: {
-        plateNumber:
-          ocrResult.text,
-
-        rawText:
-          ocrResult.rawText,
-
-        lines:
-          ocrResult.lines
-      }
-    };
-
     console.log(
-      '======================================'
+      '✓ OCR complete'
     );
 
     console.log(
-      'FINAL RESULT'
+      `  Plate text: ${
+        ocrResult.text
+      }`
     );
 
     console.log(
-      '======================================'
+      `  Raw text: ${
+        ocrResult.rawText
+      }`
     );
 
-    console.log(
-      JSON.stringify(
-        finalResult,
-        null,
-        2
+
+    if (
+      Array.isArray(
+        ocrResult.lines
       )
+    ) {
+
+      console.log('');
+
+      console.log(
+        '  Lines:'
+      );
+
+      ocrResult.lines.forEach(
+        (line, index) => {
+
+          console.log(
+            `    ${
+              index + 1
+            }. ${
+              line.text
+            } (confidence: ${
+              line.confidence
+            })`
+          );
+
+        }
+      );
+    }
+
+
+    // ==================================================
+    // 4. FINAL RESULT
+    // ==================================================
+
+    console.log('');
+
+    console.log(
+      '======================================'
+    );
+
+    console.log(
+      'PIPELINE SUCCESS'
+    );
+
+    console.log(
+      '======================================'
     );
 
     console.log('');
+
     console.log(
-      '🔥 FULL PIPELINE SUCCESS'
+      `Plate count: ${
+        plateResult.plateCount
+      }`
     );
+
+    console.log(
+      `Selected plate area: ${
+        primaryPlate.area
+      }px²`
+    );
+
+    console.log(
+      `Plate number: ${
+        ocrResult.text
+      }`
+    );
+
+    console.log('');
+
+    console.log(
+      'Pipeline:'
+    );
+
+    console.log(
+      '  Image'
+    );
+
+    console.log(
+      '    ↓'
+    );
+
+    console.log(
+      '  Roboflow plate detection'
+    );
+
+    console.log(
+      '    ↓'
+    );
+
+    console.log(
+      '  Largest plate (plates[0])'
+    );
+
+    console.log(
+      '    ↓'
+    );
+
+    console.log(
+      '  OCR crop'
+    );
+
+    console.log(
+      '    ↓'
+    );
+
+    console.log(
+      '  PaddleOCR'
+    );
+
+    console.log(
+      '    ↓'
+    );
+
+    console.log(
+      `  ${ocrResult.text}`
+    );
+
+    console.log('');
 
   } catch (err) {
+
     console.error('');
+
     console.error(
       '❌ PIPELINE FAILED'
     );
+
+    console.error('');
+
     console.error(
-      err.message
+      err.message || err
     );
 
     process.exit(1);
   }
 }
+
 
 runPipeline();
