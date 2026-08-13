@@ -9,12 +9,12 @@ __pycache__/
 *.pyc
 
 # Generated uploads
-uploads/*
-!uploads/.gitkeep
+/image-pipeline/uploads/*
+!/image-pipeline/uploads/.gitkeep
 
 # Generated crops
-uploads/crops/*
-!uploads/crops/.gitkeep
+/image-pipeline/uploads/crops/*
+!/image-pipeline/uploads/crops/.gitkeep
 
 # Model files
 *.pt
@@ -32,4 +32,3 @@ Thumbs.db
 
 # Node
 node_modules/
-

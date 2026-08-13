@@ -1,0 +1,9 @@
+# Vehicle detection
+ultralytics
+opencv-python-headless
+numpy
+
+# License plate OCR
+paddlepaddle
+paddleocr
+Pillow
