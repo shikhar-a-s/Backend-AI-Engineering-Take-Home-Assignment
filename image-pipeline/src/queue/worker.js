@@ -180,6 +180,7 @@ const worker = new Worker(
           throw new Error(
   `RapidOCR failed: ${ocrResult.error}`
 );
+        }
         console.log(
           `[${processingId}] Plate number: ` +
           `${ocrResult.text}`
