@@ -7,7 +7,7 @@ gigVision accepts a vehicle image, processes it asynchronously using computer vi
 ## Live Demo
 
 **Frontend:**  
-https://gigvision-frontend-en0epa67m-shikhar-a-s-s-projects.vercel.app
+https://gigvision-frontend.vercel.app/
 
 **Backend:**  
 https://backend-ai-engineering-take-home-a4k7.onrender.com
