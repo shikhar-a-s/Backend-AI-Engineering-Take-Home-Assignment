@@ -4,6 +4,8 @@
 
 # Python
 paddle-env/
+deploy-env/
+image-pipeline/deploy-env/
 venv/
 __pycache__/
 *.pyc
