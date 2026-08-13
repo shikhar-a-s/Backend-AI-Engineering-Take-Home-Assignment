@@ -1,5 +1,5 @@
 opencv-python-headless==5.0.0.93
 numpy==2.3.5
-paddleocr==3.7.0
-paddlepaddle==3.2.0
 Pillow==12.1.0
+rapidocr==3.9.2
+onnxruntime==1.28.0

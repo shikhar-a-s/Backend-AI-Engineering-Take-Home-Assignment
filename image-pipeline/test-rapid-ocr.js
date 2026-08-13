@@ -1,6 +1,6 @@
 const {
   extractPlateText
-} = require('./src/services/paddleOCR');
+} = require('./src/services/rapidOCR');
 
 async function test() {
   try {

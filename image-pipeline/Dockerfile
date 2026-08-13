@@ -55,12 +55,12 @@ COPY . .
 # ==================================================
 
 ENV NODE_ENV=production
-ENV PADDLE_PYTHON=python
 
-# Limit CPU thread usage for the ML stack.
-# This helps keep memory/CPU usage predictable
+# RapidOCR uses ONNX Runtime.
+# Use a single thread to keep CPU/memory usage predictable
 # on the Render instance.
 
+ENV RAPIDOCR_PYTHON=python
 ENV OMP_NUM_THREADS=1
 ENV MKL_NUM_THREADS=1
 

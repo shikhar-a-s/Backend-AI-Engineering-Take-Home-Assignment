@@ -19,7 +19,7 @@ const {
 
 const {
   extractPlateText
-} = require('../services/paddleOCR');
+} = require('../services/rapidOCR');
 
 
 const worker = new Worker(
@@ -163,12 +163,12 @@ const worker = new Worker(
 
 
         // ==================================================
-        // 5. PADDLE OCR
+        // 5. RAPID OCR
         // ==================================================
 
         console.log(
-          `[${processingId}] Running PaddleOCR...`
-        );
+  `[${processingId}] Running RapidOCR...`
+);
 
         const ocrResult =
           await extractPlateText(
@@ -178,11 +178,8 @@ const worker = new Worker(
         if (!ocrResult.success) {
 
           throw new Error(
-            `PaddleOCR failed: ` +
-            `${ocrResult.error}`
-          );
-        }
-
+  `RapidOCR failed: ${ocrResult.error}`
+);
         console.log(
           `[${processingId}] Plate number: ` +
           `${ocrResult.text}`

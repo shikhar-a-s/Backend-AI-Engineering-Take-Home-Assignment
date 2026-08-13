@@ -8,7 +8,7 @@ const {
 
 const {
   extractPlateText
-} = require('./src/services/paddleOCR');
+} = require('./src/services/rapidOCR');
 
 const path = require('path');
 const fs = require('fs');
@@ -213,7 +213,7 @@ async function runPipeline() {
     // ==================================================
 
     console.log(
-      'Step 3: Running PaddleOCR...'
+      'Step 3: Running RapidOCR...'
     );
 
 
@@ -361,7 +361,7 @@ async function runPipeline() {
     );
 
     console.log(
-      '  PaddleOCR'
+      '  RapidOCR'
     );
 
     console.log(
