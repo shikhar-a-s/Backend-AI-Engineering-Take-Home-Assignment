@@ -366,55 +366,35 @@ export default function App() {
 
   const activeItem = getActiveItem();
 
-<<<<<<< ours
-  // Helper to format path into a static URL mapping to the sirv uploads route
-  const getStaticUrl = (filePath, fileUrl) => {
-  // Prefer fileUrl (external/durable storage) if available
-  if (fileUrl) return fileUrl;
-  if (!filePath) return '';
-
-  const normalized = filePath.replace(/\\/g, '/');
-  const uploadsIndex = normalized.indexOf('uploads/');
-  if (uploadsIndex !== -1) {
-    return `${API_BASE_URL}/${normalized.substring(uploadsIndex)}`;
-  }
-  return '';
-};
-
-  // Convert absolute path of crops to the served upload url or use uploaded crop url
-  const getCropUrl = (ocrCropPath, procId, cropUrl) => {
-    if (cropUrl) return cropUrl;
-    if (!ocrCropPath) return '';
-=======
-  // Helper to format legacy local file paths to a reachable URL (fallback only)
-  // Primary source for images is now the ImageKit URLs stored in the API response.
-  const getStaticUrl = (filePath) => {
+  // Prefer durable ImageKit URL.
+  // Fall back to the old local /uploads path for legacy records.
+  const getStaticUrl = (filePath, imageUrl) => {
+    if (imageUrl) return imageUrl;
     if (!filePath) return '';
-
     const normalized = filePath.replace(/\\/g, '/');
     const uploadsIndex = normalized.indexOf('uploads/');
-
     if (uploadsIndex !== -1) {
       return `${API_BASE_URL}/${normalized.substring(uploadsIndex)}`;
     }
-
     return '';
   };
 
-  // Convert absolute path of crops to a URL. Prefer a full URL when available;
-  // otherwise attempt to map known local paths to the API host as a last resort.
-  const getCropUrl = (ocrCropPath, procId) => {
+  // Prefer the durable ImageKit crop URL.
+  // Fall back to legacy local paths for older records.
+  const getCropUrl = (ocrCropPath, procId, cropUrl) => {
+    if (cropUrl) return cropUrl;
     if (!ocrCropPath) return '';
-    if (typeof ocrCropPath === 'string' && ocrCropPath.startsWith('http')) return ocrCropPath;
-
-    const normalized = (ocrCropPath || '').replace(/\\/g, '/');
+    if (typeof ocrCropPath === 'string' && ocrCropPath.startsWith('http')) {
+      return ocrCropPath;
+    }
+    const normalized = ocrCropPath.replace(/\\/g, '/');
     const uploadsIndex = normalized.indexOf('uploads/');
-    if (uploadsIndex !== -1) return `${API_BASE_URL}/${normalized.substring(uploadsIndex)}`;
-
-    // Fallback to the conventional backend path if nothing else matches
->>>>>>> theirs
+    if (uploadsIndex !== -1) {
+      return `${API_BASE_URL}/${normalized.substring(uploadsIndex)}`;
+    }
     return `${API_BASE_URL}/uploads/crops/${procId}-plate-ocr.png`;
   };
+
 
   return (
     <ErrorBoundary>
@@ -627,11 +607,7 @@ export default function App() {
                   <div className="image-viewer">
                     {/* Display original image. Set up dynamic overlay using image dimensions. */}
                     <img 
-<<<<<<< ours
-                      src={getStaticUrl(activeResult.filePath, activeResult.fileUrl)} 
-=======
-                      src={activeResult.imageUrl || getStaticUrl(activeResult.filePath)} 
->>>>>>> theirs
+                      src={getStaticUrl(activeResult.filePath, activeResult.imageUrl)} 
                       alt="Analyzed vehicle" 
                       className="display-image"
                     />
@@ -718,11 +694,7 @@ export default function App() {
                     <div className="ocr-display">
                       {(activeResult.analysis.plate.ocrCrop?.url || activeResult.analysis.plate.ocrCrop?.path) && (
                         <img 
-<<<<<<< ours
-                          src={getCropUrl(activeResult.analysis.plate.ocrCrop.path, activeResult.processingId, activeResult.analysis.plate.ocrCrop.url)} 
-=======
-                          src={activeResult.analysis.plate.ocrCrop?.url ? activeResult.analysis.plate.ocrCrop.url : getCropUrl(activeResult.analysis.plate.ocrCrop.path, activeResult.processingId)} 
->>>>>>> theirs
+                          src={getCropUrl(activeResult.analysis.plate.ocrCrop?.path, activeResult.processingId, activeResult.analysis.plate.ocrCrop?.url)} 
                           alt="License Plate Crop" 
                           className="ocr-crop-img"
                           onError={(e) => {
