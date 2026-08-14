@@ -140,19 +140,8 @@ const worker = new Worker(
         // (Upload of OCR crop deferred until after OCR completes so RapidOCR can read the local file)
 
 
-        // Upload crop to ImageKit for durable storage (if configured)
-        try {
-          const { uploadFromPath } = require('../services/imagekitClient');
-          if (process.env.IMAGEKIT_PRIVATE_KEY && process.env.IMAGEKIT_URL_ENDPOINT) {
-            const ikCrop = await uploadFromPath(ocrCrop.outputPath, '/crops');
-            if (ikCrop && ikCrop.url) {
-              // store the URL for frontend access
-              ocrCrop.url = ikCrop.url;
-            }
-          }
-        } catch (ikErr) {
-          console.warn(`[${processingId}] ImageKit crop upload failed:`, ikErr && ikErr.message ? ikErr.message : ikErr);
-        }
+        // NOTE: OCR crop upload is performed after OCR completes using the unified @imagekit/nodejs service below.
+        // The earlier upload-at-creation step was removed to avoid requiring the deprecated 'imagekit' SDK.
 
         console.log(`[${processingId}] Running RapidOCR...`);
 

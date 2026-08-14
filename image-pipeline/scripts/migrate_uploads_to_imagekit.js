@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 
 const Image = require('../src/models/Image');
-const { uploadFromPath } = require('../src/services/imagekitClient');
+const { uploadBuffer } = require('../src/services/imagekit');
 
 const MONGO = process.env.MONGO_URL || 'mongodb://localhost:27017/image_pipeline';
 
@@ -12,7 +12,10 @@ async function uploadIfExists(localPath, folder) {
   try {
     if (!localPath) return null;
     if (!fs.existsSync(localPath)) return null;
-    const res = await uploadFromPath(localPath, folder);
+    const fsPromises = fs.promises;
+    const buffer = await fsPromises.readFile(localPath);
+    const fileName = path.basename(localPath);
+    const res = await uploadBuffer(buffer, fileName, folder);
     return res && res.url ? res.url : null;
   } catch (err) {
     console.warn('Upload failed for', localPath, err && err.message ? err.message : err);

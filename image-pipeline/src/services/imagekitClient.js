@@ -1,30 +1,15 @@
-const ImageKit = require('imagekit');
+// Backwards-compatible adapter for older callers that expect uploadFromPath
+// Re-uses the unified @imagekit/nodejs-based service implemented in ./imagekit
+
 const fs = require('fs');
 const path = require('path');
-
-const imagekit = new ImageKit({
-  publicKey: process.env.IMAGEKIT_PUBLIC_KEY || '',
-  privateKey: process.env.IMAGEKIT_PRIVATE_KEY || '',
-  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || ''
-});
+const { uploadBuffer } = require('./imagekit');
 
 async function uploadFromPath(filePath, folder = '/') {
   const fileName = path.basename(filePath);
-  const fileBuffer = fs.readFileSync(filePath);
-
-  return new Promise((resolve, reject) => {
-    imagekit.upload(
-      {
-        file: fileBuffer,
-        fileName,
-        folder
-      },
-      (err, result) => {
-        if (err) return reject(err);
-        resolve(result);
-      }
-    );
-  });
+  const buffer = fs.readFileSync(filePath);
+  const res = await uploadBuffer(buffer, fileName, folder);
+  return res;
 }
 
-module.exports = { imagekit, uploadFromPath };
+module.exports = { uploadFromPath };
