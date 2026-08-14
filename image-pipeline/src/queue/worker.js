@@ -221,24 +221,20 @@ const worker = new Worker(
           },
 
           ocrCrop: {
-<<<<<<< ours
+ocrCrop: {
+  path: ocrCrop.outputPath,
 
-            path:
-              ocrCrop.outputPath,
+  url:
+    ocrCrop.uploadUrl ||
+    ocrCrop.url ||
+    null,
 
-            url:
-              ocrCrop.url || null,
+  bbox:
+    ocrCrop.expandedBbox,
 
-            bbox:
-              ocrCrop.expandedBbox,
-
-            dimensions:
-              ocrCrop.cropDimensions
-=======
-            url: ocrCrop.uploadUrl || ocrCrop.outputPath,
-            bbox: ocrCrop.expandedBbox,
-            dimensions: ocrCrop.cropDimensions
->>>>>>> theirs
+  dimensions:
+    ocrCrop.cropDimensions
+}
           },
 
 
