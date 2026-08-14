@@ -8,7 +8,7 @@ const ImageSchema = new mongoose.Schema({
   fileSize: Number,
   width: Number,
   height: Number,
-  status: { type: String, enum: ['pending','processing','completed','failed'], default: 'pending', index: true },
+  status: { type: String, enum: ['pending','processing','completed','failed','timed_out'], default: 'pending', index: true },
   error: String,
   analysis: { type: mongoose.Schema.Types.Mixed },
   createdAt: { type: Date, default: Date.now },

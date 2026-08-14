@@ -289,6 +289,9 @@ def is_result_useful(result):
     if not lines:
         return False
 
+    # Consider a line "substantial" if it has reasonable width/height.
+    # Lower the thresholds slightly to accommodate narrow license plate crops
+    # that contain a single substantial line.
     substantial = [
 
         line
@@ -296,13 +299,14 @@ def is_result_useful(result):
         for line in lines
 
         if (
-            (line["width"] or 0) >= 40
+            (line["width"] or 0) >= 30
             and
-            (line["height"] or 0) >= 15
+            (line["height"] or 0) >= 12
         )
     ]
 
-    if len(substantial) < 2:
+    # Accept a single substantial line as useful (many plates are single-line).
+    if len(substantial) < 1:
         return False
 
     return True

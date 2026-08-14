@@ -80,9 +80,13 @@ export default function App() {
   const fileInputRef = useRef(null);
   const pollIntervalRef = useRef(null);
   const healthIntervalRef = useRef(null);
+  const pollErrorsRef = useRef({}); // track consecutive poll errors per processingId
   const API_BASE_URL =
     import.meta.env.VITE_API_BASE_URL ||
     'https://backend-ai-engineering-take-home-a4k7.onrender.com';
+
+  // Stale processing threshold in seconds (frontend will treat jobs older than this as timed out)
+  const STALE_THRESHOLD = parseInt(import.meta.env.VITE_STALE_THRESHOLD) || 600; // 10 minutes default
 
   // Load history from state to localStorage
   useEffect(() => {
@@ -166,32 +170,101 @@ export default function App() {
     let changed = false;
 
     for (const item of itemsToPoll) {
-      try {
-        const res = await fetch(`${API_BASE_URL}/api/images/${item.processingId}/status`);
-        if (res.ok) {
-          const statusData = await res.json(); // { processingId, status, error, ... }
-          const index = updatedHistory.findIndex(h => h.processingId === item.processingId);
-          if (index !== -1 && updatedHistory[index].status !== statusData.status) {
-            updatedHistory[index] = {
-              ...updatedHistory[index],
-              status: statusData.status,
-              error: statusData.error || null
-            };
-            changed = true;
+     try {
+       const res = await fetch(`${API_BASE_URL}/api/images/${item.processingId}/status`);
 
-            // If active item finished, pull results
-            if (item.processingId === activeId && statusData.status === 'completed') {
-              fetchResults(activeId);
+       // Treat non-OK responses as transient server errors; track them.
+       if (!res.ok) {
+         // increment error counter
+         pollErrorsRef.current[item.processingId] = (pollErrorsRef.current[item.processingId] || 0) + 1;
+         console.warn(`Status fetch returned ${res.status} for ${item.processingId} (error count=${pollErrorsRef.current[item.processingId]})`);
+
+         // If we've seen 3 consecutive errors for this item, mark it timed_out/failed locally
+         if (pollErrorsRef.current[item.processingId] >= 3) {
+           const index = updatedHistory.findIndex(h => h.processingId === item.processingId);
+           if (index !== -1 && updatedHistory[index].status !== 'timed_out') {
+             updatedHistory[index] = {
+               ...updatedHistory[index],
+               status: 'timed_out',
+               error: `Processing failed: server returned ${res.status}. This may indicate the server instance restarted or exceeded memory (OOM). Please try again.`
+             };
+             changed = true;
+             if (item.processingId === activeId) setActiveResult(null);
+           }
+         }
+
+         continue;
+       }
+
+       // Success — reset error counter for this item
+       pollErrorsRef.current[item.processingId] = 0;
+
+       const statusData = await res.json(); // { processingId, status, error, processingStartedAt, ... }
+       const index = updatedHistory.findIndex(h => h.processingId === item.processingId);
+
+       // If status is processing, check for staleness
+       if (statusData.status === 'processing' && statusData.processingStartedAt) {
+         const started = Date.parse(statusData.processingStartedAt);
+         const ageSec = (Date.now() - started) / 1000;
+         if (ageSec > STALE_THRESHOLD) {
+            // mark timed out with a server-instance explanatory message
+            if (index !== -1 && updatedHistory[index].status !== 'timed_out') {
+              updatedHistory[index] = {
+                ...updatedHistory[index],
+                status: 'timed_out',
+                error: `Processing timed out after ${Math.round(ageSec)}s — the server instance may have restarted or exceeded available memory (OOM). Please retry.`
+              };
+              changed = true;
+              // If this was the active item, clear active result
+              if (item.processingId === activeId) {
+                setActiveResult(null);
+              }
             }
+            continue; // skip further processing for this item
           }
-        }
-      } catch (err) {
-        console.error("Polling error for", item.processingId, err);
-      }
+       }
+
+       if (index !== -1 && updatedHistory[index].status !== statusData.status) {
+         updatedHistory[index] = {
+           ...updatedHistory[index],
+           status: statusData.status,
+           error: statusData.error || null
+         };
+         changed = true;
+
+         // If active item finished, pull results
+         if (item.processingId === activeId && statusData.status === 'completed') {
+           fetchResults(activeId);
+         }
+       }
+     } catch (err) {
+       console.error("Polling error for", item.processingId, err);
+       // Network error — increment retry count and if too many, mark timed_out
+       pollErrorsRef.current[item.processingId] = (pollErrorsRef.current[item.processingId] || 0) + 1;
+       if (pollErrorsRef.current[item.processingId] >= 3) {
+         const index = updatedHistory.findIndex(h => h.processingId === item.processingId);
+         if (index !== -1 && updatedHistory[index].status !== 'timed_out') {
+           updatedHistory[index] = {
+             ...updatedHistory[index],
+             status: 'timed_out',
+             error: 'Processing failed: server unreachable. The server instance may have restarted or run out of memory (OOM). Please retry.'
+           };
+           changed = true;
+           if (item.processingId === activeId) setActiveResult(null);
+         }
+       }
+     }
     }
 
     if (changed) {
       setHistory(updatedHistory);
+    }
+
+    // If active item exists but is now marked timed_out, set activeId to keep UI consistent
+    const activeIdx = updatedHistory.findIndex(h => h.processingId === activeId);
+    if (activeIdx !== -1 && updatedHistory[activeIdx].status === 'timed_out') {
+      // Clear active result to avoid showing stale/partial data
+      setActiveResult(null);
     }
   };
 
@@ -502,6 +575,19 @@ export default function App() {
                     <AlertCircle size={48} />
                     <h3>Processing Failed</h3>
                     <p>{activeItem.error || 'An error occurred during asynchronous pipeline execution.'}</p>
+                    <div style={{ marginTop: 12 }}>
+                      <button className="btn-upload" onClick={() => { setActiveId(null); }}>OK</button>
+                    </div>
+                  </div>
+                ) : activeItem.status === 'timed_out' ? (
+                  <div className="empty-state" style={{ color: 'var(--danger)' }}>
+                    <AlertCircle size={48} />
+                    <h3>Processing timed out</h3>
+                    <p>{activeItem.error || 'Processing did not complete in time. Please try again.'}</p>
+                    <div style={{ marginTop: 12, display: 'flex', gap: 8 }}>
+                      <button className="btn-upload" onClick={() => { /* prompt re-upload */ setActiveId(null); fileInputRef.current && fileInputRef.current.click(); }}>Upload again</button>
+                      <button className="btn-upload" onClick={() => { setHistory(prev => prev.filter(h => h.processingId !== activeItem.processingId)); setActiveId(null); }}>Remove</button>
+                    </div>
                   </div>
                 ) : activeItem.status !== 'completed' ? (
                   <div className="empty-state">

@@ -5,8 +5,17 @@ const morgan = require('morgan');
 const cors = require('cors');
 const path = require('path');
 const imagesRouter = require('./routes/images');
-// start worker
-require('./queue/worker');
+// start worker — allow disabling during local development when Redis isn't available
+if (process.env.DISABLE_WORKER !== 'true') {
+  try {
+    require('./queue/worker');
+  } catch (err) {
+    // Log and continue — this prevents the whole server from exiting when Redis isn't available during development.
+    console.warn('Worker not started or failed to initialize:', err && err.message ? err.message : err);
+  }
+} else {
+  console.log('Worker start skipped (DISABLE_WORKER=true)');
+}
 
 const app = express();
 app.use(morgan('dev'));
@@ -53,6 +62,39 @@ mongoose.connect(MONGO, { useNewUrlParser: true, useUnifiedTopology: true })
 const server = app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server listening on port ${PORT}`);
 });
+
+// Server-side reaper for stale processing jobs
+const Image = require('./models/Image');
+const STALE_THRESHOLD = parseInt(process.env.STALE_THRESHOLD || '600', 10); // seconds
+const REAPER_INTERVAL = parseInt(process.env.REAPER_INTERVAL || '60', 10); // seconds
+
+const runReaper = async () => {
+  try {
+    const cutoff = new Date(Date.now() - STALE_THRESHOLD * 1000);
+    const res = await Image.updateMany(
+      {
+        status: 'processing',
+        processingStartedAt: { $lt: cutoff }
+      },
+      {
+        $set: {
+          status: 'timed_out',
+          error: 'Processing timed out (server-side reaper)',
+          completedAt: new Date()
+        }
+      }
+    );
+
+    if (res && res.modifiedCount > 0) {
+      console.log(`Reaper: marked ${res.modifiedCount} processing job(s) as timed_out (older than ${STALE_THRESHOLD}s)`);
+    }
+  } catch (err) {
+    console.error('Reaper error:', err);
+  }
+};
+
+// Start periodic reaper
+const reaperHandle = setInterval(runReaper, REAPER_INTERVAL * 1000);
 
 // Graceful Shutdown
 const gracefulShutdown = async (signal) => {
