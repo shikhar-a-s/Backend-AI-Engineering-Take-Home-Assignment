@@ -66,10 +66,10 @@ ENV MKL_NUM_THREADS=1
 
 
 # ==================================================
-# Upload directory
+# Temporary working directory for crops
 # ==================================================
 
-RUN mkdir -p /app/uploads/crops
+RUN mkdir -p /app/tmp/crops
 
 
 # ==================================================

@@ -27,12 +27,7 @@ app.use(cors());
 
 app.use(express.json());
 
-app.use(
-  '/uploads',
-  express.static(
-    path.join(__dirname, '..', 'uploads')
-  )
-);
+// Static uploads no longer served from local filesystem — images are stored in ImageKit for durable storage.
 
 // Health Check Endpoints
 app.get('/health', (req, res) => {

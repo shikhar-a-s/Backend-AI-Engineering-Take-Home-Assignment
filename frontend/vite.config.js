@@ -13,11 +13,5 @@ export default defineConfig({
         changeOrigin: true,
       }
     },
-    configureServer(server) {
-      server.middlewares.use(
-        '/uploads',
-        sirv(path.resolve(__dirname, '../image-pipeline/uploads'), { dev: true, single: false })
-      );
-    }
   }
 });

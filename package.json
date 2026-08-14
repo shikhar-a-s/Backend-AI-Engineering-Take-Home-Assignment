@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@imagekit/nodejs": "^7.10.0",
     "axios": "^1.19.0",
     "docker": "^1.0.0"
   }

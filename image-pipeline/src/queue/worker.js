@@ -27,54 +27,51 @@ const worker = new Worker(
 
   async (job) => {
 
-    const {
-      processingId,
-      filePath
-    } = job.data;
+   const {
+     processingId,
+     filePath,
+     imageUrl
+   } = job.data;
 
-    const doc =
-      await Image.findOne({
-        processingId
-      });
+   const doc = await Image.findOne({ processingId });
 
-    if (!doc) {
-      throw new Error(
-        'Image document not found'
-      );
-    }
+   if (!doc) {
+     throw new Error('Image document not found');
+   }
 
-    try {
+   // If imageUrl is provided (ImageKit), download to a temp file for processing
+   let downloadedPath = null;
+   try {
+     if (imageUrl && !filePath) {
+       const { downloadImage } = require('../services/downloadImage');
+       downloadedPath = await downloadImage(imageUrl, processingId, path.extname(imageUrl) || '.png');
+     }
 
-      // ==================================================
-      // 1. START PROCESSING
-      // ==================================================
+     const sourcePath = filePath || downloadedPath;
 
-      doc.status =
-        'processing';
+     if (!sourcePath) {
+       throw new Error('No source image available for processing');
+     }
 
-      doc.processingStartedAt =
-        new Date();
+     // ==================================================
+     // 1. START PROCESSING
+     // ==================================================
 
-      await doc.save();
+     doc.status = 'processing';
+     doc.processingStartedAt = new Date();
+     await doc.save();
 
-      console.log(
-        `[${processingId}] Processing started`
-      );
+     console.log(`[${processingId}] Processing started`);
 
+     // ==================================================
+     // 2. EXISTING IMAGE ANALYSIS
+     // ==================================================
 
-      // ==================================================
-      // 2. EXISTING IMAGE ANALYSIS
-      // ==================================================
+     const analysis = await analyzeImage(sourcePath);
 
-      const analysis =
-        await analyzeImage(
-          filePath
-        );
-
-
-      // ==================================================
-      // 3. PLATE DETECTION
-      // ==================================================
+     // ==================================================
+     // 3. PLATE DETECTION
+     // ==================================================
 
       console.log(
         `[${processingId}] Detecting license plates...`
@@ -92,10 +89,7 @@ const worker = new Worker(
        * 4. Selects plates[0] as primaryPlate
        */
 
-      const plateResult =
-        await detectPlates(
-          filePath
-        );
+      const plateResult = await detectPlates(sourcePath);
 
 
       if (
@@ -126,20 +120,11 @@ const worker = new Worker(
         // 4. CREATE OCR CROP
         // ==================================================
 
-        const cropDir =
-          path.join(
-            __dirname,
-            '..',
-            '..',
-            'uploads',
-            'crops'
-          );
+        const cropDir = path.join(process.cwd(), 'tmp', 'crops');
+        const fs = require('fs');
+        if (!fs.existsSync(cropDir)) fs.mkdirSync(cropDir, { recursive: true });
 
-        const ocrCropPath =
-          path.join(
-            cropDir,
-            `${processingId}-plate-ocr.png`
-          );
+        const ocrCropPath = path.join(cropDir, `${processingId}-plate-ocr.png`);
 
         /*
          * Crop directly from the original image.
@@ -148,18 +133,12 @@ const worker = new Worker(
          * current expansion/upscaling behavior.
          */
 
-        const ocrCrop =
-          await cropPlateForOCR(
-            filePath,
-            primaryPlate.bbox,
-            ocrCropPath,
-            0.25
-          );
+        const ocrCrop = await cropPlateForOCR(sourcePath, primaryPlate.bbox, ocrCropPath, 0.25);
 
-        console.log(
-          `[${processingId}] OCR crop created: ` +
-          `${ocrCrop.outputPath}`
-        );
+        console.log(`[${processingId}] OCR crop created: ${ocrCrop.outputPath}`);
+
+        // (Upload of OCR crop deferred until after OCR completes so RapidOCR can read the local file)
+
 
         // Upload crop to ImageKit for durable storage (if configured)
         try {
@@ -193,10 +172,26 @@ const worker = new Worker(
           `${ocrResult.text}`
         );
 
+                // Upload OCR crop to ImageKit and store durable URL (after OCR)
+                try {
+                  const fsPromises = require('fs').promises;
+                  const { uploadBuffer } = require('../services/imagekit');
+                  const cropBuffer = await fsPromises.readFile(ocrCrop.outputPath);
+                  const cropFileName = `${processingId}-plate-ocr.png`;
+                  const cropUpload = await uploadBuffer(cropBuffer, cropFileName, '/image-pipeline/crops');
+                  console.log(`[${processingId}] Uploaded OCR crop to ImageKit: ${cropUpload.url}`);
 
-        // ==================================================
-        // 6. STORE PLATE + OCR RESULTS
-        // ==================================================
+                  ocrCrop.uploadUrl = cropUpload.url;
+
+                  try { await fsPromises.unlink(ocrCrop.outputPath); } catch (e) { /* ignore */ }
+                } catch (e) {
+                  console.error(`[${processingId}] Failed to upload OCR crop to ImageKit:`, e);
+                }
+
+
+                // ==================================================
+                // 6. STORE PLATE + OCR RESULTS
+                // ==================================================
 
         analysis.plate = {
 
@@ -226,6 +221,7 @@ const worker = new Worker(
           },
 
           ocrCrop: {
+<<<<<<< ours
 
             path:
               ocrCrop.outputPath,
@@ -238,7 +234,13 @@ const worker = new Worker(
 
             dimensions:
               ocrCrop.cropDimensions
+=======
+            url: ocrCrop.uploadUrl || ocrCrop.outputPath,
+            bbox: ocrCrop.expandedBbox,
+            dimensions: ocrCrop.cropDimensions
+>>>>>>> theirs
           },
+
 
           ocr: {
 
@@ -428,22 +430,24 @@ const worker = new Worker(
 
     } catch (err) {
 
-      console.error(
-        `[${processingId}] Worker error:`,
-        err
-      );
+      console.error(`[${processingId}] Worker error:`, err);
 
-      doc.status =
-        'failed';
-
-      doc.error =
-        String(
-          err.message || err
-        );
-
+      doc.status = 'failed';
+      doc.error = String(err.message || err);
       await doc.save();
 
       throw err;
+
+    } finally {
+      // cleanup downloaded temp file if present
+      try {
+        const fsPromises = require('fs').promises;
+        if (downloadedPath) {
+          await fsPromises.unlink(downloadedPath);
+        }
+      } catch (cleanupErr) {
+        // ignore cleanup errors
+      }
     }
   },
 

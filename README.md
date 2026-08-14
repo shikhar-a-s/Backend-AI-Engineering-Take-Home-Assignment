@@ -176,7 +176,8 @@ MongoDB provides a flexible document structure for storing detection, OCR, image
 
 Local Image Storage
 
-Images are currently stored locally under uploads/. A production-scale system should use durable object storage such as S3/R2.
+  
+Uploaded originals and OCR crops are stored in ImageKit (durable object storage). The backend persists ImageKit URLs in MongoDB so assets remain available even if the server restarts. Ensure the IMAGEKIT_PRIVATE_KEY and IMAGEKIT_URL_ENDPOINT environment variables are configured for local and deployed environments.
 
 Authentication
 

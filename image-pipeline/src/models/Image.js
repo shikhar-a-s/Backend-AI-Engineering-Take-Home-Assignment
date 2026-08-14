@@ -3,7 +3,9 @@ const mongoose = require('mongoose');
 const ImageSchema = new mongoose.Schema({
   processingId: { type: String, required: true, unique: true, index: true },
   originalFilename: String,
+  // filePath kept for backward compatibility; prefer imageUrl for durable storage
   filePath: String,
+  imageUrl: String,
   mimeType: String,
   fileSize: Number,
   width: Number,
