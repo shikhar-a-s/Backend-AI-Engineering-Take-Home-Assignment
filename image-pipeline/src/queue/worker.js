@@ -161,14 +161,21 @@ const worker = new Worker(
           `${ocrCrop.outputPath}`
         );
 
+        // Upload crop to ImageKit for durable storage (if configured)
+        try {
+          const { uploadFromPath } = require('../services/imagekitClient');
+          if (process.env.IMAGEKIT_PRIVATE_KEY && process.env.IMAGEKIT_URL_ENDPOINT) {
+            const ikCrop = await uploadFromPath(ocrCrop.outputPath, '/crops');
+            if (ikCrop && ikCrop.url) {
+              // store the URL for frontend access
+              ocrCrop.url = ikCrop.url;
+            }
+          }
+        } catch (ikErr) {
+          console.warn(`[${processingId}] ImageKit crop upload failed:`, ikErr && ikErr.message ? ikErr.message : ikErr);
+        }
 
-        // ==================================================
-        // 5. RAPID OCR
-        // ==================================================
-
-        console.log(
-  `[${processingId}] Running RapidOCR...`
-);
+        console.log(`[${processingId}] Running RapidOCR...`);
 
         const ocrResult =
           await extractPlateText(
@@ -222,6 +229,9 @@ const worker = new Worker(
 
             path:
               ocrCrop.outputPath,
+
+            url:
+              ocrCrop.url || null,
 
             bbox:
               ocrCrop.expandedBbox,

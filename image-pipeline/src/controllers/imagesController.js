@@ -17,7 +17,21 @@ exports.uploadImage = async (req, res) => {
       status: 'pending'
     });
 
-    // enqueue job
+    // Upload to ImageKit for durable storage (if configured)
+    try {
+      const { uploadFromPath } = require('../services/imagekitClient');
+      if (process.env.IMAGEKIT_PRIVATE_KEY && process.env.IMAGEKIT_URL_ENDPOINT) {
+        const ikRes = await uploadFromPath(req.file.path, '/uploads');
+        if (ikRes && ikRes.url) {
+          doc.fileUrl = ikRes.url;
+          await doc.save();
+        }
+      }
+    } catch (ikErr) {
+      console.warn('ImageKit upload failed:', ikErr && ikErr.message ? ikErr.message : ikErr);
+    }
+
+    // enqueue job (keep using local filePath for worker processing)
     await imageQueue.add('process-image', { processingId, filePath: req.file.path });
 
     return res.status(202).json({ processingId, status: 'pending', message: 'Upload accepted. Processing queued.' });

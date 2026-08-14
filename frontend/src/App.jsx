@@ -367,24 +367,23 @@ export default function App() {
   const activeItem = getActiveItem();
 
   // Helper to format path into a static URL mapping to the sirv uploads route
-  const getStaticUrl = (filePath) => {
+  const getStaticUrl = (filePath, fileUrl) => {
+  // Prefer fileUrl (external/durable storage) if available
+  if (fileUrl) return fileUrl;
   if (!filePath) return '';
 
   const normalized = filePath.replace(/\\/g, '/');
-
   const uploadsIndex = normalized.indexOf('uploads/');
-
   if (uploadsIndex !== -1) {
     return `${API_BASE_URL}/${normalized.substring(uploadsIndex)}`;
   }
-
   return '';
 };
 
-  // Convert absolute path of crops to the served upload url
-  const getCropUrl = (ocrCropPath, procId) => {
+  // Convert absolute path of crops to the served upload url or use uploaded crop url
+  const getCropUrl = (ocrCropPath, procId, cropUrl) => {
+    if (cropUrl) return cropUrl;
     if (!ocrCropPath) return '';
-    // Standard crop location: /uploads/crops/[processingId]-plate-ocr.png on the backend
     return `${API_BASE_URL}/uploads/crops/${procId}-plate-ocr.png`;
   };
 
@@ -599,7 +598,7 @@ export default function App() {
                   <div className="image-viewer">
                     {/* Display original image. Set up dynamic overlay using image dimensions. */}
                     <img 
-                      src={getStaticUrl(activeResult.filePath)} 
+                      src={getStaticUrl(activeResult.filePath, activeResult.fileUrl)} 
                       alt="Analyzed vehicle" 
                       className="display-image"
                     />
@@ -686,7 +685,7 @@ export default function App() {
                     <div className="ocr-display">
                       {activeResult.analysis.plate.ocrCrop?.path && (
                         <img 
-                          src={getCropUrl(activeResult.analysis.plate.ocrCrop.path, activeResult.processingId)} 
+                          src={getCropUrl(activeResult.analysis.plate.ocrCrop.path, activeResult.processingId, activeResult.analysis.plate.ocrCrop.url)} 
                           alt="License Plate Crop" 
                           className="ocr-crop-img"
                           onError={(e) => {
