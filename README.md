@@ -190,11 +190,9 @@ CORS is currently permissive to support the separately deployed frontend and bac
 Limitations
 OCR and detection accuracy depend on image quality.
 Blurry, small, or partially hidden plates may produce unreliable results.
-Local filesystem storage is not suitable for horizontal scaling.
 Full authentication and authorization are not implemented.
 Advanced queue retry/dead-letter handling can be added.
 Future Improvements
-Object storage for uploaded images
 Authentication and authorization
 Queue retries and dead-letter queues
 Rate limiting
