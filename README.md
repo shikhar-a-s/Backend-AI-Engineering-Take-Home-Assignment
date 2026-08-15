@@ -47,8 +47,8 @@ Redis / BullMQ
      ▼
 Background Worker
      │
-     ├── Vehicle Detection
-     ├── Plate Detection
+     ├── Plate Detection(Roboflow)
+     ├── Plate Selection/45% Rule
      ├── Plate Crop
      ├── RapidOCR
      ├── Validation
